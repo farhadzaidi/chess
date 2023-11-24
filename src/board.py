@@ -46,14 +46,14 @@ class Board:
 		return not (Board.is_white(p1) ^ Board.is_white(p2))
 
 	@staticmethod
-	def is_valid_ray_move(cur_idx, new_idx, p, pos, delta):
+	def is_valid_move(cur_idx, new_idx, p, pos, delta):
 		# enforce boundary
 		if 0 <= new_idx <= 63:
 			opp_colors_or_emp = Board.opp_colors(p, pos[new_idx], True)
 
 			# check for wrapping around to other side of board
-			# new_col will always be zero or one (delta) to the left
-			# or right of cur_col
+			# new_col will always be 'delta' squares away from cur_col
+			# unless the piece wraps around to the other side of the board
 			cur_col, new_col = cur_idx % 8, new_idx % 8
 			no_wrap = (new_col == (cur_col + delta))
 
@@ -82,22 +82,27 @@ class Board:
 	def move_gen(self, pos):
 		moves = {}
 		bishop_directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+		knight_directions = [(-2, -1), (-1, -2), (-2, 1), (-1, 2), 
+			(1, -2), (2, -1), (2, 1), (1, 2)]
 		rook_directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-		queen_directions = bishop_directions + rook_directions
+		king_queen_directions = bishop_directions + rook_directions
 
 		for i, p in enumerate(pos):
 			if p in 'pP':
 				moves[i] = self.pawn_move_gen(i, p, pos)
 			elif p in 'bB':
-				moves[i] = self.ray_move_gen(i, p, pos, bishop_directions)
-			# elif p in 'nN':
-			# 	moves[i] = self.knight_move_gen(i, p, pos)
+				moves[i] = self.sliding_move_gen(i, p, pos, bishop_directions)
+			elif p in 'nN':
+				moves[i] = self.king_knight_move_gen(i, p, pos, 
+					knight_directions)
 			elif p in 'rR':
-				moves[i] = self.ray_move_gen(i, p, pos, rook_directions)
+				moves[i] = self.sliding_move_gen(i, p, pos, rook_directions)
 			elif p in 'qQ':
-				moves[i] = self.ray_move_gen(i, p, pos, queen_directions)
-			# elif p in 'kK':
-			# 	moves[i] = self.king_move_gen(i, p, pos)
+				moves[i] = self.sliding_move_gen(i, p, pos, 
+					king_queen_directions)
+			elif p in 'kK':
+				moves[i] = self.king_knight_move_gen(i, p, pos, 
+					king_queen_directions)
 
 		return moves
 
@@ -160,21 +165,25 @@ class Board:
 
 		return moves
 
-	# def knight_move_gen(self, i, p, pos):
-	# 	moves = set()
-	# 	row, col = i // 8, i % 8
-	# 	directions = [(-2, -1), (-1, -2), (-2, 1), (-1, 2), 
-	# 		(1, -2), (2, -1), (2, 1), (1, 2)]
+	def king_knight_move_gen(self, i, p, pos, directions):
+		moves = set()
+		row, col = i // 8, i % 8
 
+		for row_d, col_d in directions:
+			new_idx = (row + row_d) * 8 + (col + col_d)
+			if Board.is_valid_move(i, new_idx, p, pos, col_d):
+				moves.add(new_idx)
 
-	def ray_move_gen(self, i, p, pos, directions):
+		return moves
+
+	def sliding_move_gen(self, i, p, pos, directions):
 		moves = set()
 		row, col = i // 8, i % 8
 
 		for row_d, col_d in directions:
 			cur_idx = i
 			new_idx = (row + row_d) * 8 + (col + col_d)
-			while Board.is_valid_ray_move(cur_idx, new_idx, p, pos, col_d):
+			while Board.is_valid_move(cur_idx, new_idx, p, pos, col_d):
 				# valid move
 				moves.add(new_idx)
 

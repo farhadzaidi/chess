@@ -9,8 +9,7 @@ pygame.init()
 # SCREEN_WIDTH = pygame.display.Info().current_w // 1.15
 # SCREEN_HEIGHT = pygame.display.Info().current_h // 1.15
 SCREEN_WIDTH = 1200
-SCREEN_HEIGHT = 750
-# SQ_DIM = SCREEN_HEIGHT // 8.5
+SCREEN_HEIGHT = 800
 SQ_DIM = SCREEN_HEIGHT // 9.5
 BOARD_DIM = SQ_DIM * 8
 PADDING = (SCREEN_HEIGHT - BOARD_DIM) // 2
@@ -25,15 +24,21 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 font = pygame.font.Font('freesansbold.ttf', 20)
 big_font = pygame.font.Font('freesansbold.ttf', 50)
 
-# resize svg img directly since pygame.image.scale makes it blurry
-def resize_svg(path, resize_dim):
-	with open(path, 'r') as f:
-		regex = r'width="(\d+\.?\d*)mm" height="(\d+\.?\d*)mm"'
-		replace = f'width="{resize_dim}mm" height="{resize_dim}mm"'
-		resized_img = re.sub(regex, replace, f.read())
+# load piece images
+pieces = {
+    'p': 'bp', 'b': 'bb', 'n': 'bn',
+    'r': 'br', 'q': 'bq', 'k': 'bk',
+    'P': 'wp', 'B': 'wb', 'N': 'wn',
+    'R': 'wr', 'Q': 'wq', 'K': 'wk',
+}
+for p, f in pieces.items():
+	path = f'../images/{f}.png'
+	img = pygame.image.load(path)
+	img_normal = pygame.transform.smoothscale(img, (SQ_DIM, SQ_DIM))
+	img_sm = pygame.transform.smoothscale(img, (SQ_DIM // 5, SQ_DIM // 5))
 
-	with open(path, 'w') as f:
-		f.write(resized_img)
+	# overwrite values with piece images
+	pieces[p] = (img_normal, img_sm)
 
 def draw_board():
 	# draw border
@@ -61,18 +66,17 @@ def draw_sidebar():
 	pygame.draw.rect(screen, DARK, (sb_x, sb_y, sb_w, sb_h), 3)
 
 def draw_pieces():
-	piece_padding = SQ_DIM // 30
 	for i, p in enumerate(b.board):
 		if p == '+':
 			continue
 
 		row, col = i // 8, i % 8
-		p_x = PADDING + col * SQ_DIM + piece_padding
-		p_y = PADDING + row * SQ_DIM + piece_padding
+		p_x = PADDING + col * SQ_DIM
+		p_y = PADDING + row * SQ_DIM
 		screen.blit(pieces[p][0], (p_x, p_y))
 
 		if i == selected:
-			outline = (p_x - piece_padding, p_y  - piece_padding, SQ_DIM, SQ_DIM)
+			outline = (p_x, p_y, SQ_DIM, SQ_DIM)
 			pygame.draw.rect(screen, INFO, outline, 3)
 
 def draw_moves(from_idx):
@@ -83,28 +87,6 @@ def draw_moves(from_idx):
 		center = (sq_x + SQ_DIM // 2, sq_y + SQ_DIM // 2)
 		radius = 7
 		pygame.draw.circle(screen, INFO, center, radius)
-
-
-# load piece images
-img_size = SQ_DIM // 4
-img_size_sm = SQ_DIM // 10
-pieces = {
-    'p': 'bp', 'b': 'bb', 'n': 'bn',
-    'r': 'br', 'q': 'bq', 'k': 'bk',
-    'P': 'wp', 'B': 'wb', 'N': 'wn',
-    'R': 'wr', 'Q': 'wq', 'K': 'wk',
-}
-for p, f in pieces.items():
-	path = f'../images/{f}.svg'
-	resize_svg(path, img_size)
-	img = pygame.image.load(path)
-
-	path = f'../images/{f}_sm.svg'
-	resize_svg(path, img_size_sm)
-	img_sm = pygame.image.load(path)
-
-	# overwrite value with piece images
-	pieces[p] = (img, img_sm)
 
 b = Board()
 
