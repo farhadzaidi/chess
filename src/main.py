@@ -6,10 +6,10 @@ pygame.init()
 
 # the GUI and all of its assets are scaled with 
 # the user's screen size
-# SCREEN_WIDTH = pygame.display.Info().current_w // 1.15
-# SCREEN_HEIGHT = pygame.display.Info().current_h // 1.15
-SCREEN_WIDTH = 1200
-SCREEN_HEIGHT = 800
+SCREEN_WIDTH = pygame.display.Info().current_w // 1.15
+SCREEN_HEIGHT = pygame.display.Info().current_h // 1.15
+# SCREEN_WIDTH = 1200
+# SCREEN_HEIGHT = 800
 SQ_DIM = SCREEN_HEIGHT // 9.5
 BOARD_DIM = SQ_DIM * 8
 PADDING = (SCREEN_HEIGHT - BOARD_DIM) // 2
@@ -95,7 +95,7 @@ fps = 60
 run = True
 selected = None
 invalid = None
-invalid_time = 0
+turn = 'W'
 while run:
 	timer.tick(fps)
 	screen.fill(LIGHT)
@@ -115,22 +115,23 @@ while run:
 			col = (event.pos[0] - PADDING) // SQ_DIM
 			row = (event.pos[1] - PADDING) // SQ_DIM
 
-			if selected is None:
-				# select piece
-				from_idx = int(row * 8 + col)
-				if b.board[from_idx] != '+':
-					selected = from_idx
-			else:
-				# check if move is valid and make it
-				to_idx = int(row * 8 + col)
-				if to_idx in b.valid_moves.get(from_idx, []):
-					b.make_move(from_idx, to_idx, b.board[from_idx])
-				elif from_idx == to_idx:
-					selected = None
+			if (0 <= row <= 7) and (0 <= col <= 7):
+				if selected is None:
+					from_idx = int(row * 8 + col)
+					if Board.same_colors(b.board[from_idx], turn):
+						selected = from_idx
 				else:
-					from_idx = to_idx
-					selected = to_idx
-
+					to_idx = int(row * 8 + col)
+					if to_idx in b.valid_moves.get(from_idx, []):
+						b.make_move(from_idx, to_idx, b.board[from_idx])
+						turn = 'W' if turn == 'b' else 'b' # switch turns
+						selected = None
+					elif (Board.same_colors(b.board[from_idx], b.board[to_idx])
+						and from_idx != to_idx):
+						selected = to_idx
+						from_idx = to_idx
+					else:
+						selected = None
 
 	pygame.display.flip()
 

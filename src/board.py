@@ -11,6 +11,9 @@ class Board:
 			'R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R',
 		]
 
+		self.black_pieces = self.board[0:16]
+		self.white_pieces = self.board[48:64]
+
 		self.moves = []
 		self.valid_moves = self.move_gen(self.board)
 
@@ -30,7 +33,6 @@ class Board:
 	# unless empty=True, then returns True if either square is empty
 	@staticmethod
 	def opp_colors(p1, p2, empty=False):
-		# print(f'opp_colors: {p1, p2}')
 		if p1 == '+' or p2 == '+':
 			return empty or False
 
@@ -46,21 +48,25 @@ class Board:
 		return not (Board.is_white(p1) ^ Board.is_white(p2))
 
 	@staticmethod
+	def in_bounds(idx):
+		return 0 <= idx <= 63
+
+	# given two subsequent moves and a column delta, returns 
+	# True if the two moves are physically consistent on a 
+	# chessboard (i.e. returns False if the second move wraps
+	# around to the other side)
+	@staticmethod
+	def no_wrap(cur_idx, new_idx, delta):
+		cur_col, new_col = cur_idx % 8, new_idx % 8
+		return new_col == (cur_col + delta)
+
+	# checks if the move is psuedo-legal 
+	# i.e. does not account for checks
+	@staticmethod
 	def is_valid_move(cur_idx, new_idx, p, pos, delta):
-		# enforce boundary
-		if 0 <= new_idx <= 63:
-			opp_colors_or_emp = Board.opp_colors(p, pos[new_idx], True)
-
-			# check for wrapping around to other side of board
-			# new_col will always be 'delta' squares away from cur_col
-			# unless the piece wraps around to the other side of the board
-			cur_col, new_col = cur_idx % 8, new_idx % 8
-			no_wrap = (new_col == (cur_col + delta))
-
-			return opp_colors_or_emp and no_wrap
-		else:
-			return False
-			
+		return (Board.in_bounds(new_idx) and 
+			Board.no_wrap(cur_idx, new_idx, delta)
+			and Board.opp_colors(p, pos[new_idx], empty=True))
 
 	# CLASS METHODS
 
@@ -74,10 +80,16 @@ class Board:
 		self.board[from_idx] = '+'
 		self.board[to_idx] = from_piece
 
+		# remove from respective list
+		if Board.is_white(to_piece):
+			self.white_pieces.remove(to_piece)
+
+		if Board.is_black(to_piece):
+			self.black_pieces.remove(to_piece)
+
 		# call move gen after every move to generate 
 		# valid moves for next pos
 		self.valid_moves = self.move_gen(self.board)
-
 
 	def move_gen(self, pos):
 		moves = {}
@@ -87,6 +99,7 @@ class Board:
 		rook_directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
 		king_queen_directions = bishop_directions + rook_directions
 
+		king_idx = 60
 		for i, p in enumerate(pos):
 			if p in 'pP':
 				moves[i] = self.pawn_move_gen(i, p, pos)
@@ -101,9 +114,12 @@ class Board:
 				moves[i] = self.sliding_move_gen(i, p, pos, 
 					king_queen_directions)
 			elif p in 'kK':
+				if p == 'K':
+					king_idx = i
 				moves[i] = self.king_knight_move_gen(i, p, pos, 
 					king_queen_directions)
 
+		print(self.in_check(king_idx, 'K', self.board))
 		return moves
 
 	def pawn_move_gen(self, i, p, pos):
@@ -149,18 +165,18 @@ class Board:
 			prev_move = self.moves[-1]
 			from_row = prev_move[0] // 8
 			to_row = prev_move[1] // 8
+			to_col = prev_move[1] % 8
 			p_type = prev_move[2]
 
 			if (p_type in 'pP' and Board.opp_colors(p, p_type)
 				and abs(from_row - to_row) == 2):
-				to_col = prev_move[1] % 8
 
 				# take northwest
-				if (col + west_d) == to_col:
+				if row == to_row and (col + west_d) == to_col:
 					moves.add(northwest)
 
 				# take northeast
-				if (col + east_d) == to_col:
+				if row == to_row and (col + east_d) == to_col:
 					moves.add(northeast)
 
 		return moves
@@ -181,9 +197,8 @@ class Board:
 		row, col = i // 8, i % 8
 
 		for row_d, col_d in directions:
-			cur_idx = i
 			new_idx = (row + row_d) * 8 + (col + col_d)
-			while Board.is_valid_move(cur_idx, new_idx, p, pos, col_d):
+			while Board.is_valid_move(i, new_idx, p, pos, col_d):
 				# valid move
 				moves.add(new_idx)
 
@@ -192,7 +207,7 @@ class Board:
 					break
 
 				# increment in respective direction
-				cur_idx = new_idx
+				i = new_idx
 				new_idx += row_d * 8 + col_d
 
 		return moves
