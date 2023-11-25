@@ -99,7 +99,6 @@ class Board:
 		rook_directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
 		king_queen_directions = bishop_directions + rook_directions
 
-		king_idx = 60
 		for i, p in enumerate(pos):
 			if p in 'pP':
 				moves[i] = self.pawn_move_gen(i, p, pos)
@@ -114,12 +113,9 @@ class Board:
 				moves[i] = self.sliding_move_gen(i, p, pos, 
 					king_queen_directions)
 			elif p in 'kK':
-				if p == 'K':
-					king_idx = i
 				moves[i] = self.king_knight_move_gen(i, p, pos, 
 					king_queen_directions)
 
-		print(self.in_check(king_idx, 'K', self.board))
 		return moves
 
 	def pawn_move_gen(self, i, p, pos):
@@ -197,8 +193,9 @@ class Board:
 		row, col = i // 8, i % 8
 
 		for row_d, col_d in directions:
+			cur_idx = i
 			new_idx = (row + row_d) * 8 + (col + col_d)
-			while Board.is_valid_move(i, new_idx, p, pos, col_d):
+			while Board.is_valid_move(cur_idx, new_idx, p, pos, col_d):
 				# valid move
 				moves.add(new_idx)
 
@@ -207,7 +204,7 @@ class Board:
 					break
 
 				# increment in respective direction
-				i = new_idx
+				cur_idx = new_idx
 				new_idx += row_d * 8 + col_d
 
 		return moves

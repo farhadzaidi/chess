@@ -6,10 +6,10 @@ pygame.init()
 
 # the GUI and all of its assets are scaled with 
 # the user's screen size
-SCREEN_WIDTH = pygame.display.Info().current_w // 1.15
-SCREEN_HEIGHT = pygame.display.Info().current_h // 1.15
-# SCREEN_WIDTH = 1200
-# SCREEN_HEIGHT = 800
+# SCREEN_WIDTH = pygame.display.Info().current_w // 1.15
+# SCREEN_HEIGHT = pygame.display.Info().current_h // 1.15
+SCREEN_WIDTH = 1200
+SCREEN_HEIGHT = 800
 SQ_DIM = SCREEN_HEIGHT // 9.5
 BOARD_DIM = SQ_DIM * 8
 PADDING = (SCREEN_HEIGHT - BOARD_DIM) // 2
