@@ -1,17 +1,17 @@
 from move import Move
 
-class MoveGenerator:
 
+class MoveGenerator:
 	BISHOP_DIRECTIONS = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
 	ROOK_DIRECTIONS = [(1, 0), (-1, 0), (0, 1), (0, -1)]
 	KING_QUEEN_DIRECTIONS = BISHOP_DIRECTIONS + ROOK_DIRECTIONS
 	KNIGHT_DIRECTIONS = [
-		(-2, -1), (-1, -2), (-2, 1), (-1, 2), 
+		(-2, -1), (-1, -2), (-2, 1), (-1, 2),
 		(1, -2), (2, -1), (2, 1), (1, 2)
 	]
 
 	def __init__(self):
-		pass		
+		pass
 
 	# MOVE GENERATION
 
@@ -20,31 +20,54 @@ class MoveGenerator:
 
 		for piece in board:
 			if piece.type == 'p':
-				moves[piece.index] = self.generate_pawn_moves(piece, board, 
-					prev_move)
+				moves[piece.index] = self.generate_pawn_moves(
+					piece,
+					board,
+					prev_move
+				)
 			elif piece.type == 'b':
-				moves[piece.index] = self.generate_sliding_moves(piece, board,
-					MoveGenerator.BISHOP_DIRECTIONS)
+				moves[piece.index] = self.generate_sliding_moves(
+					piece,
+					board,
+					MoveGenerator.BISHOP_DIRECTIONS
+				)
 			elif piece.type == 'n':
-				moves[piece.index] = self.generate_one_step_moves(piece, board,
-					MoveGenerator.KNIGHT_DIRECTIONS)
+				moves[piece.index] = self.generate_one_step_moves(
+					piece,
+					board,
+					MoveGenerator.KNIGHT_DIRECTIONS
+				)
 			elif piece.type == 'r':
-				moves[piece.index] = self.generate_sliding_moves(piece, board, 
-					MoveGenerator.ROOK_DIRECTIONS)
+				moves[piece.index] = self.generate_sliding_moves(
+					piece,
+					board,
+					MoveGenerator.ROOK_DIRECTIONS
+				)
 			elif piece.type == 'q':
-				moves[piece.index] = self.generate_sliding_moves(piece, board, 
-					MoveGenerator.KING_QUEEN_DIRECTIONS)
+				moves[piece.index] = self.generate_sliding_moves(
+					piece,
+					board,
+					MoveGenerator.KING_QUEEN_DIRECTIONS
+				)
 			elif piece.type == 'k':
-				normal_moves = self.generate_one_step_moves(piece, board, 
-					MoveGenerator.KING_QUEEN_DIRECTIONS)
-				castling_moves = self.generate_castling_moves(piece, board, 
-					castling_rights)
-				moves[piece.index] = normal_moves.union(castling_moves)
+				normal_moves = self.generate_one_step_moves(
+					piece,
+					board,
+					MoveGenerator.KING_QUEEN_DIRECTIONS
+				)
+
+				castling_moves = self.generate_castling_moves(
+					piece,
+					board,
+					castling_rights
+				)
+
+				moves[piece.index] = normal_moves + castling_moves
 
 		return moves
 
 	def generate_pawn_moves(self, piece, board, prev_move):
-		moves = set()
+		moves = []
 		row, col = piece.index // 8, piece.index % 8
 		is_white = piece.is_white()
 		is_black = piece.is_black()
@@ -58,86 +81,118 @@ class MoveGenerator:
 		east_direction = 1 if is_white else -1
 		west_direction = -1 if is_white else 1
 
-		# check if pawn can move 1 square north
 		row_north = row + north_direction
+		row_north_north = row_north + north_direction
+		col_east = col + east_direction
+		col_west = col + west_direction
+
+		# check if pawn can move 1 square north
 		north_index = row_north * 8 + col
-		if board[north_index].is_empty():
-			moves.add(north_index)
+		m = Move(piece.index, north_index, piece)
+		if self.in_bounds(m, 0) and board[north_index].is_empty():
+			moves.append(m)
 
 			# check if pawn can move two squares north
-			north_north_index = (row_north + north_direction) * 8 + col
-			if board[north_north_index].is_empty():
+			north_north_index = row_north_north * 8 + col
+			m = Move(piece.index, north_north_index, piece)
+			if self.in_bounds(m, 0) and board[north_north_index].is_empty():
 				starting_rank = 6 if is_white else 1
 				if is_white and row == starting_rank:
-					moves.add(north_north_index)
+					moves.append(m)
 				elif is_black and row == starting_rank:
-					moves.add(north_north_index)
+					moves.append(m)
 
 		# check if pawn can take northwest
-		northwest_index = row_north * 8 + (col + west_direction)
-		move_northwest = Move(piece.index, northwest_index, piece)
-		in_bounds = self.in_bounds(move_northwest, west_direction)
-		if in_bounds and piece.diff_colors(board[northwest_index]):
-			moves.add(northwest_index)
+		northwest_index = row_north * 8 + col_west
+		m = Move(piece.index, northwest_index, piece)
+		if (self.in_bounds(m, west_direction) and
+				piece.diff_colors(board[northwest_index])):
+			m.captured_piece = board[northwest_index]
+			if m.captured_piece.type == 'k':
+				m.check = True
+
+			moves.append(m)
 
 		# check if pawn can take northeast
-		northeast_index = row_north * 8 + (col + east_direction)
-		move_northeast = Move(piece.index, northeast_index, piece)
-		in_bounds = self.in_bounds(move_northeast, east_direction)
-		if in_bounds and piece.diff_colors(board[northeast_index]):
-			moves.add(northeast_index)
+		northeast_index = row_north * 8 + col_east
+		m = Move(piece.index, northeast_index, piece)
+		if (self.in_bounds(m, east_direction) and
+				piece.diff_colors(board[northeast_index])):
+			m.captured_piece = board[northeast_index]
+			if m.captured_piece.type == 'k':
+				m.check = True
+
+			moves.append(m)
 
 		# en passant
 		if prev_move:
-			from_piece = prev_move.piece
-			from_row = prev_move.from_index // 8
-			to_row = prev_move.to_index // 8
-			to_col = prev_move.to_index % 8
+			prev_move_from_row = prev_move.from_index // 8
+			prev_move_to_row = prev_move.to_index // 8
+			prev_move_to_col = prev_move.to_index % 8
 
-			move_two_squares = abs(to_row - from_row) == 2
-			if (from_piece.type == 'p' and piece.diff_colors(from_piece) 
-				and move_two_squares):
+			move_two_squares = abs(prev_move_to_row - prev_move_from_row) == 2
+			if (prev_move.piece.type == 'p' and piece.diff_colors(prev_move.piece) and 
+					move_two_squares):
+				to_index = None
 
 				# take northwest
-				if row == to_row and (col + west_direction) == to_col:
-					moves.add(northwest_index)
-
+				if row == prev_move_to_row and col_west == prev_move_to_col:
+					to_index = northwest_index
 				# take northeast
-				if row == to_row and (col + east_direction) == to_col:
-					moves.add(northeast_index)
+				elif row == prev_move_to_row and col_east == prev_move_to_col:
+					to_index = northeast_index
+
+				# can take en passant
+				if to_index:
+					captured_piece_index = to_index + 8 if is_white else to_index - 8
+					m = Move(piece.index, to_index, piece, board[captured_piece_index], 
+						special_move='en_passant')
+					moves.append(m)
 
 		return moves
 
 	def generate_one_step_moves(self, piece, board, directions):
-		moves = set()
+		moves = []
 
 		for row_direction, col_direction in directions:
 			cur_index = piece.index
 			move_index = cur_index + row_direction * 8 + col_direction
-			move = Move(cur_index, move_index, piece)
-			if self.is_pseudo_legal_move(move, col_direction, board):
-				moves.add(move_index)
+			m = Move(cur_index, move_index, piece)
+			if self.is_pseudo_legal_move(m, col_direction, board):
+				if not board[move_index].is_empty():
+					m.captured_piece = board[move_index]
+					if m.captured_piece.type == 'k':
+						m.check = True
+
+				moves.append(m)
 
 		return moves
 
 	def generate_sliding_moves(self, piece, board, directions):
-		moves = set()
+		moves = []
 
 		for row_direction, col_direction in directions:
 			cur_index = piece.index
 			move_index = cur_index + row_direction * 8 + col_direction
-			move = Move(cur_index, move_index, piece)
+			m = Move(cur_index, move_index, piece)
 
-			while self.is_pseudo_legal_move(move, col_direction, board):
-				moves.add(move.to_index)
+			while self.is_pseudo_legal_move(m, col_direction, board):
+				# reset from_index to original index 
+				m.from_index = piece.index
+				moves.append(m)
 
 				# if capture, then break (blocks ray)
-				if piece.diff_colors(board[move.to_index]):
+				if piece.diff_colors(board[m.to_index]):
+					m.captured_piece = board[m.to_index]
+					if m.captured_piece.type == 'k':
+						m.check = True
+
 					break
 
 				# increment in respective direction
-				move.from_index = move.to_index
-				move.to_index += row_direction * 8 + col_direction
+				cur_index = move_index
+				move_index += row_direction * 8 + col_direction
+				m = Move(cur_index, move_index, piece)
 
 		return moves
 
@@ -150,33 +205,37 @@ class MoveGenerator:
 
 			return True
 
-		moves = set()
+		moves = []
 
 		if piece.is_black():
 			# top left black rook
 			if castling_rights['black_long']:
 				in_between = board[1:4]
 				if empty_squares(in_between):
-					moves.add(0)
+					m = Move(4, 0, piece, special_move='castle')
+					moves.append(m)
 
 			# top right black rook
 			if castling_rights['black_short']:
 				in_between = board[5:7]
 				if empty_squares(in_between):
-					moves.add(7)
+					m = Move(4, 7, piece, special_move='castle')
+					moves.append(m)
 
 		else:
 			# bottom left white rook
 			if castling_rights['white_long']:
 				in_between = board[57:60]
 				if empty_squares(in_between):
-					moves.add(56)
+					m = Move(60, 56, piece, special_move='castle')
+					moves.append(m)
 
 			# bottom right white rook
 			if castling_rights['white_short']:
 				in_between = board[61:63]
 				if empty_squares(in_between):
-					moves.add(63)
+					m = Move(60, 63, piece, special_move='castle')
+					moves.append(m)
 
 		return moves
 
@@ -187,8 +246,8 @@ class MoveGenerator:
 			from_piece = move.piece
 			to_piece = board[move.to_index]
 			return from_piece.diff_colors_or_empty(to_piece)
-		else:
-			return False
+
+		return False
 
 	def in_bounds(self, move, horiz_direction):
 		in_vertical_bounds = (0 <= move.to_index <= 63)
@@ -199,5 +258,3 @@ class MoveGenerator:
 		in_horizontal_bounds = (to_col == (from_col + horiz_direction))
 
 		return in_vertical_bounds and in_horizontal_bounds
-
-
