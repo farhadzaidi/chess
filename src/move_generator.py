@@ -108,9 +108,6 @@ class MoveGenerator:
 		if (self.in_bounds(m, west_direction) and
 				piece.diff_colors(board[northwest_index])):
 			m.captured_piece = board[northwest_index]
-			if m.captured_piece.type == 'k':
-				m.check = True
-
 			moves.append(m)
 
 		# check if pawn can take northeast
@@ -119,9 +116,6 @@ class MoveGenerator:
 		if (self.in_bounds(m, east_direction) and
 				piece.diff_colors(board[northeast_index])):
 			m.captured_piece = board[northeast_index]
-			if m.captured_piece.type == 'k':
-				m.check = True
-
 			moves.append(m)
 
 		# en passant
@@ -161,8 +155,6 @@ class MoveGenerator:
 			if self.is_pseudo_legal_move(m, col_direction, board):
 				if not board[move_index].is_empty():
 					m.captured_piece = board[move_index]
-					if m.captured_piece.type == 'k':
-						m.check = True
 
 				moves.append(m)
 
@@ -184,9 +176,6 @@ class MoveGenerator:
 				# if capture, then break (blocks ray)
 				if piece.diff_colors(board[m.to_index]):
 					m.captured_piece = board[m.to_index]
-					if m.captured_piece.type == 'k':
-						m.check = True
-
 					break
 
 				# increment in respective direction
@@ -209,14 +198,14 @@ class MoveGenerator:
 
 		if piece.is_black():
 			# top left black rook
-			if castling_rights['black_long']:
+			if castling_rights['b_long']:
 				in_between = board[1:4]
 				if empty_squares(in_between):
 					m = Move(4, 0, piece, special_move='castle')
 					moves.append(m)
 
 			# top right black rook
-			if castling_rights['black_short']:
+			if castling_rights['b_short']:
 				in_between = board[5:7]
 				if empty_squares(in_between):
 					m = Move(4, 7, piece, special_move='castle')
@@ -224,14 +213,14 @@ class MoveGenerator:
 
 		else:
 			# bottom left white rook
-			if castling_rights['white_long']:
+			if castling_rights['w_long']:
 				in_between = board[57:60]
 				if empty_squares(in_between):
 					m = Move(60, 56, piece, special_move='castle')
 					moves.append(m)
 
 			# bottom right white rook
-			if castling_rights['white_short']:
+			if castling_rights['w_short']:
 				in_between = board[61:63]
 				if empty_squares(in_between):
 					m = Move(60, 63, piece, special_move='castle')

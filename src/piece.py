@@ -1,5 +1,6 @@
 
 class Piece:
+
 	def __init__(self, p_color, p_type, p_index, p_symbol):
 		self.color = p_color
 		self.type = p_type
@@ -41,3 +42,8 @@ class Piece:
 
 	def __repr__(self):
 		return self.symbol
+
+	# used for GUI when grouping captured pieces
+	def __lt__(self, other):
+		order = {'p': 0, 'b': 1, 'n': 2, 'r': 3, 'q': 4, 'k': 5}
+		return order[self.type] < order[other.type] 

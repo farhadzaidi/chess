@@ -8,12 +8,13 @@ class Board:
 	def __init__(self):
 		self.initialize_board()
 		self.moves = []
+		self.undone_moves = []
 		self.captured_pieces = {'w': [], 'b': []}
 		self.castling_rights = {
-			'white_short': True,
-			'white_long': True,
-			'black_short': True,
-			'black_long': True
+			'w_short': True,
+			'w_long': True,
+			'b_short': True,
+			'b_long': True
 		}
 
 	def initialize_board(self):
@@ -63,31 +64,35 @@ class Board:
 		self.board[move.to_index] = move.piece
 		self.set_empty_square(move.from_index)
 
-	def undo_move(self, move):
-		pass
+	def update_castling_rights(self, move, undo=False):
+		if undo:
+			if move.updated_castling_rights:
+				for right in move.updated_castling_rights:
+					self.castling_rights[right] = True
+				move.updated_castling_rights = None
+			return
+			
+		rights = []
+		castling_indices = {0: 'b_long', 7: 'b_short', 56: 'w_long', 63: 'w_short'}
 
-	def update_castling_rights(self, move):
-		is_black_rook = move.piece.symbol == 'br'
-		is_white_rook = move.piece.symbol == 'wr'
-		is_black_king = move.piece.symbol == 'bk'
-		is_white_king = move.piece.symbol == 'wk'
+		# revoke castling rights if rook moves
+		if move.from_index in castling_indices:
+			rights.append(castling_indices[move.from_index])
 
-		if is_black_rook:
-			if move.from_index == 0:
-				self.castling_rights['black_long'] = False
-			elif move.from_index == 7:
-				self.castling_rights['black_short'] = False
-		elif is_white_rook:
-			if move.from_index == 56:
-				self.castling_rights['white_long'] = False
-			elif move.from_index == 63:
-				self.castling_rights['white_short'] = False
-		elif is_black_king:
-			self.castling_rights['black_long'] = False
-			self.castling_rights['black_short'] = False
-		elif is_white_king:
-			self.castling_rights['white_long'] = False
-			self.castling_rights['white_short'] = False
+		# revoke castling rights if rook gets captured
+		if move.to_index in castling_indices:
+			rights.append(castling_indices[move.to_index])
+
+		# revoke castling rights if king moves
+		if move.piece.symbol == 'bk' or move.piece.symbol == 'wk':
+			color = move.piece.color
+			rights.extend([f'{color}_long', f'{color}_short'])
+
+		# only update rights if previously True
+		for right in rights:
+			if self.castling_rights[right]:
+				self.castling_rights[right] = False
+				move.updated_castling_rights.append(right)
 
 	def en_passant(self, move):
 		# update board
@@ -119,6 +124,34 @@ class Board:
 		self.board[rook_pos] = rook
 		self.set_empty_square(move.from_index)
 		self.set_empty_square(move.to_index)
+
+	def undo_move(self):
+		move = self.moves.pop()
+		self.update_castling_rights(move, undo=True)
+
+		if move.special_move == 'en_passant':
+			self.undo_en_passant(move)
+			return
+
+		if move.special_move == 'castle':
+			self.undo_castle(move)
+			return
+
+		move.piece.index = move.from_index
+		self.board[move.from_index] = move.piece
+
+		if move.captured_piece:
+			move.captured_piece.index = move.to_index
+			self.board[move.to_index] = move.captured_piece
+			self.captured_pieces[move.captured_piece.color].remove(move.captured_piece)
+		else:
+			self.set_empty_square(move.to_index)
+
+	def undo_en_passant(self, move):
+		pass
+
+	def undo_castle(self, move):
+		pass
 
 	# HELPER FUNCTIONS
 

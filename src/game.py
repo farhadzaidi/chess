@@ -3,15 +3,12 @@ from board import Board
 
 pygame.init()
 
-# the GUI and all of its assets are scaled with 
-# the user's screen size
-SCREEN_WIDTH = pygame.display.Info().current_w // 1.6
-SCREEN_HEIGHT = pygame.display.Info().current_h // 1.15
-SCREEN_WIDTH = 750
+SCREEN_WIDTH = 680
 SCREEN_HEIGHT = 600
-SQ_DIM = SCREEN_HEIGHT // 9.5
+SQ_DIM = 63
 BOARD_DIM = SQ_DIM * 8
-PADDING = (SCREEN_HEIGHT - BOARD_DIM) // 2
+PADDING = 50
+FONT_SIZE = 20
 
 LIGHT = '#F5F5F5'
 DARK = '#2E2E38'
@@ -20,14 +17,20 @@ DANGER = '#F06070'
 
 pygame.display.set_caption('Chess')
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-font = pygame.font.Font('freesansbold.ttf', 20)
-big_font = pygame.font.Font('freesansbold.ttf', 50)
-
+font = pygame.font.SysFont('comicsansms', FONT_SIZE)
 
 def draw_board():
 	# draw border
 	border = (PADDING, PADDING, BOARD_DIM, BOARD_DIM)
 	pygame.draw.rect(screen, DARK, border, 3)
+
+	# ranks and files
+	for i in range(1, 9):
+		rank = (18, PADDING + SQ_DIM * (8 - i) + 15)
+		screen.blit(font.render(f'{i}', True, 'black'), rank)
+
+		file = (PADDING + SQ_DIM * (i - 1) + 25, PADDING + BOARD_DIM + 5)
+		screen.blit(font.render(f'{chr(i + 96)}', True, 'black'), file)
 
 	# checkerboard pattern
 	for row in range(8):
@@ -39,16 +42,8 @@ def draw_board():
 			if row % 2 == 0:
 				sq_x += SQ_DIM
 
-			pygame.draw.rect(screen, DARK, (sq_x, sq_y, SQ_DIM, SQ_DIM))
-
-
-def draw_sidebar():
-	# offset it to the right of the board
-	sb_x = PADDING * 2 + BOARD_DIM
-	sb_y = PADDING
-	sb_w = SCREEN_WIDTH - sb_x - PADDING
-	sb_h = SCREEN_HEIGHT - PADDING * 2
-	pygame.draw.rect(screen, DARK, (sb_x, sb_y, sb_w, sb_h), 3)
+			square = (sq_x, sq_y, SQ_DIM, SQ_DIM)
+			pygame.draw.rect(screen, DARK, square)
 
 
 def draw_pieces():
@@ -76,6 +71,20 @@ def draw_moves(from_index, valid_moves):
 		pygame.draw.circle(screen, INFO, center, radius)
 
 
+def draw_captured_pieces():
+	for color in b.captured_pieces:
+		for i, piece in enumerate(sorted(b.captured_pieces[color])):
+			p_x = PADDING + BOARD_DIM + 20
+			p_y = PADDING + 30 * i
+
+			if color == 'b':
+				p_x += 40
+
+			screen.blit(piece_images[piece.symbol][1], (p_x, p_y))
+
+# def switch_turns():
+# 	turn = 'w' if turn == 'b' else 'b'
+
 b = Board()
 valid_moves = b.get_valid_moves()
 
@@ -88,7 +97,7 @@ for piece in b.board:
 	path = f'../images/{piece.symbol}.png'
 	img = pygame.image.load(path)
 	img_normal = pygame.transform.smoothscale(img, (SQ_DIM, SQ_DIM))
-	img_sm = pygame.transform.smoothscale(img, (SQ_DIM // 5, SQ_DIM // 5))
+	img_sm = pygame.transform.smoothscale(img, (30, 30))
 
 	piece_images[piece.symbol] = (img_normal, img_sm)
 
@@ -97,14 +106,15 @@ fps = 60
 run = True
 selected = None
 selected_other_side = None
+undone_moves = []
 turn = 'w'
 while run:
 	timer.tick(fps)
 	screen.fill(LIGHT)
 
 	draw_board()
-	# draw_sidebar()
 	draw_pieces()
+	draw_captured_pieces()
 
 	if selected is not None:
 		draw_moves(selected, valid_moves)
@@ -113,7 +123,7 @@ while run:
 		if event.type == pygame.QUIT:
 			run = False
 
-		if event.type == pygame.MOUSEBUTTONDOWN:
+		elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
 			col = (event.pos[0] - PADDING) // SQ_DIM
 			row = (event.pos[1] - PADDING) // SQ_DIM
 
@@ -152,6 +162,15 @@ while run:
 							selected = None
 						else:
 							selected = None
+
+		elif event.type == pygame.KEYDOWN:
+			if event.key == pygame.K_LEFT:
+				if b.moves:
+					b.undo_move()
+					valid_moves = b.get_valid_moves()
+					turn = 'w' if turn == 'b' else 'b'
+					selected = None
+					selected_other_side = None
 
 	pygame.display.flip()
 
