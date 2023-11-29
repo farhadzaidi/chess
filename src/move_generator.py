@@ -15,10 +15,10 @@ class MoveGenerator:
 
 	# MOVE GENERATION
 
-	def generate_pseudo_legal_moves(self, board, castling_rights, prev_move=None):
+	def generate_pseudo_legal_moves(self, board, piece_list, castling_rights, prev_move=None):
 		moves = {}
 
-		for piece in board:
+		for piece in piece_list:
 			if piece.type == 'p':
 				moves[piece.index] = self.generate_pawn_moves(
 					piece,
@@ -227,6 +227,96 @@ class MoveGenerator:
 					moves.append(m)
 
 		return moves
+
+	def in_check(self, king, board):
+		king_row, king_col = king.index // 8, king.index % 8
+
+		# straight rays
+		for row_direction, col_direction in MoveGenerator.ROOK_DIRECTIONS:
+			prev_index = king.index
+			ray_index = king.index + row_direction * 8 + col_direction
+			ray_move = Move(prev_index, ray_index, None)
+
+			while self.in_bounds(ray_move, col_direction):
+				piece = board[ray_index]
+
+				# break if the ray runs into a piece
+				# return True if the king is attacked
+				if not piece.is_empty():
+					if piece.diff_colors(king) and piece.type in 'rq':
+						return True
+					break
+
+				# increment
+				prev_index = ray_index
+				ray_index += row_direction * 8 + col_direction
+				ray_move = Move(prev_index, ray_index, None)
+
+		# diagnal rays
+		for row_direction, col_direction in MoveGenerator.BISHOP_DIRECTIONS:
+			prev_index = king.index
+			ray_index = king.index + row_direction * 8 + col_direction
+			ray_move = Move(prev_index, ray_index, None)
+
+			while self.in_bounds(ray_move, col_direction):
+				piece = board[ray_index]
+
+				# break if the ray runs into a piece
+				# return True if the king is attacked
+				if not piece.is_empty():
+					if piece.diff_colors(king) and piece.type in 'bq':
+						return True
+					break
+
+				# increment
+				prev_index = ray_index
+				ray_index += row_direction * 8 + col_direction
+				ray_move = Move(prev_index, ray_index, None)
+
+		# pawn
+		if king.color == 'w':
+			east, west = 1, -1
+			northeast = king.index - 7
+			northwest = king.index - 9
+		else:
+			east, west = -1, 1
+			northeast = king.index + 7
+			northwest = king.index + 9
+
+		ne_ray_move = Move(king.index, northeast, None)
+		nw_ray_move = Move(king.index, northwest, None)
+
+		if self.in_bounds(ne_ray_move, east):
+			ne_piece = board[northeast]
+			if ne_piece.diff_colors(king) and ne_piece.type == 'p':
+				return True
+
+		if self.in_bounds(nw_ray_move, west):
+			nw_piece = board[northwest]
+			if nw_piece.diff_colors(king) and nw_piece.type == 'p':
+				return True
+
+		# knight
+		for row_direction, col_direction in MoveGenerator.KNIGHT_DIRECTIONS:
+			ray_index = king.index + row_direction * 8 + col_direction
+			ray_move = Move(king.index, ray_index, None)
+
+			if self.in_bounds(ray_move, col_direction):
+				piece = board[ray_index]
+				if piece.diff_colors(king) and piece.type == 'n':
+					return True
+
+		# enemy king
+		for row_direction, col_direction in MoveGenerator.KING_QUEEN_DIRECTIONS:
+			ray_index = king.index + row_direction * 8 + col_direction
+			ray_move = Move(king.index, ray_index, None)
+
+			if self.in_bounds(ray_move, col_direction):
+				piece = board[ray_index]
+				if piece.diff_colors(king) and piece.type == 'k':
+					return True
+
+		return False
 
 	# HELPER FUNCTIONS
 

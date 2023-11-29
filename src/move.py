@@ -10,4 +10,4 @@ class Move:
 		self.updated_castling_rights = []
 
 	def __repr__(self):
-		return f'{self.to_index}'
+		return f'Move({self.from_index}, {self.to_index})'

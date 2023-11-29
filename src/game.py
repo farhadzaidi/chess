@@ -56,6 +56,7 @@ def draw_pieces():
 		p_y = PADDING + row * SQ_DIM
 		screen.blit(piece_images[piece.symbol][0], (p_x, p_y))
 
+		# selected
 		if piece.index == selected or piece.index == selected_other_side:
 			outline = (p_x, p_y, SQ_DIM, SQ_DIM)
 			pygame.draw.rect(screen, INFO, outline, 3)
@@ -82,11 +83,19 @@ def draw_captured_pieces():
 
 			screen.blit(piece_images[piece.symbol][1], (p_x, p_y))
 
-# def switch_turns():
-# 	turn = 'w' if turn == 'b' else 'b'
+
+def draw_check():
+	for color in b.checks:
+		if b.checks[color]:
+			king_index = b.king_index[color]
+			row, col = king_index // 8, king_index % 8
+			p_x = PADDING + col * SQ_DIM
+			p_y = PADDING + row * SQ_DIM
+			outline = (p_x, p_y, SQ_DIM, SQ_DIM)
+			pygame.draw.rect(screen, DANGER, outline, 3)
+
 
 b = Board()
-valid_moves = b.get_valid_moves()
 
 # load piece images
 piece_images = {}
@@ -101,13 +110,15 @@ for piece in b.board:
 
 	piece_images[piece.symbol] = (img_normal, img_sm)
 
+
+turn = 'w'
+valid_moves = b.get_valid_moves(turn)
+
 timer = pygame.time.Clock()
 fps = 60
 run = True
 selected = None
 selected_other_side = None
-undone_moves = []
-turn = 'w'
 while run:
 	timer.tick(fps)
 	screen.fill(LIGHT)
@@ -115,6 +126,17 @@ while run:
 	draw_board()
 	draw_pieces()
 	draw_captured_pieces()
+	draw_check()
+
+	if not valid_moves:
+		if turn == 'w' and b.checks['w']:
+			game_end_text = 'CHECKMATE! BLACK WINS!'
+		elif turn == 'b' and b.checks['b']:
+			game_end_text = 'CHECKMATE! WHITE WINS!'
+		else:
+			game_end_text = "STALEMATE! IT'S A DRAW!"
+
+		screen.blit(font.render(game_end_text, True, 'black'), (180, 15))
 
 	if selected is not None:
 		draw_moves(selected, valid_moves)
@@ -147,8 +169,8 @@ while run:
 						if to_index == move.to_index:
 							is_valid_move = True
 							b.make_move(move)
-							valid_moves = b.get_valid_moves()
 							turn = 'w' if turn == 'b' else 'b'
+							valid_moves = b.get_valid_moves(turn)
 							selected = None
 
 					if not is_valid_move:
@@ -167,8 +189,8 @@ while run:
 			if event.key == pygame.K_LEFT:
 				if b.moves:
 					b.undo_move()
-					valid_moves = b.get_valid_moves()
 					turn = 'w' if turn == 'b' else 'b'
+					valid_moves = b.get_valid_moves(turn)
 					selected = None
 					selected_other_side = None
 
