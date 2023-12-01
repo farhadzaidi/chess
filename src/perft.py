@@ -29,5 +29,6 @@ def perft(depth, b, turn='w'):
 
 
 b = Board()
-depth = 3
+depth = 4
 nodes = perft(depth, b)
+print(f'{nodes} nodes generated at depth {depth}')
