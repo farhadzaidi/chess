@@ -11,6 +11,7 @@
 # among chess programmers
 #########################################
 
+import time
 from board import Board
 
 def perft(depth, b, turn='w'):
@@ -29,6 +30,8 @@ def perft(depth, b, turn='w'):
 
 
 b = Board()
-depth = 4
+depth = 3
+start = time.time()
 nodes = perft(depth, b)
-print(f'{nodes} nodes generated at depth {depth}')
+end = time.time()
+print(f'{nodes} nodes generated at depth {depth} in {end - start}s')

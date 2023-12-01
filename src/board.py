@@ -1,19 +1,6 @@
 from piece import Piece
 from move import Move
 
-'''
-TODO:
-- merge move_generator with board and organize code a little bit
-- implement promotions
-- implement backspace restart in GUI
-- implement draw by repetition, 50-move rule
-- implement theoretical draw/dead position
-	- king vs king
-	- king vs king and bishop
-	- king vs king and knight
-	- king and bishop vs king and bishop where both bishops are on same color squares
-'''
-
 
 class Board:
 	BISHOP_DIRECTIONS = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
@@ -23,6 +10,7 @@ class Board:
     	(-2, -1), (-1, -2), (-2, 1), (-1, 2),
     	(1, -2), (2, -1), (2, 1), (1, 2)
 	]
+
 
 	def __init__(self):
 		self.initialize_board_and_pieces()
@@ -73,6 +61,7 @@ class Board:
 		if move.special_move == 'castle':
 			self.castle(move)
 		else:
+
 			move.piece.index = move.to_index
 			self.board[move.to_index] = move.piece
 			self.set_empty_square(move.from_index)
@@ -89,6 +78,10 @@ class Board:
 			# handled separately in castle method
 			if move.piece.type == 'k':
 				self.king_index[move.piece.color] = move.to_index
+
+			if move.special_move == 'promotion':
+				self.board[move.to_index].type = 'q'
+				self.board[move.to_index].symbol = 'wq'
 
 		self.update_checks()
 
@@ -139,6 +132,10 @@ class Board:
 			else:
 				self.set_empty_square(move.to_index)
 
+			if move.special_move == 'promotion':
+				move.piece.type = 'p'
+				move.piece.symbol = 'wp'
+
 		# undo king index 
 		# works regardless of whether or not the previous move was a castle
 		if move.piece.type == 'k':
@@ -170,9 +167,11 @@ class Board:
 		for index in in_between:
 			self.set_empty_square(index)
 
+
 ###########################
 # MOVE GENERATION METHODS #
 ###########################
+
 
 	def get_valid_moves(self, side):
 
@@ -247,6 +246,7 @@ class Board:
 
 		return moves
 
+
 	def generate_pawn_moves(self, piece):
 		moves = []
 		row, col = piece.index // 8, piece.index % 8
@@ -267,10 +267,14 @@ class Board:
 		col_east = col + east_direction
 		col_west = col + west_direction
 
+		last_rank = 0 if is_white else 7
+
 		# check if pawn can move 1 square north
 		north_index = row_north * 8 + col
 		m = Move(piece.index, north_index, piece)
 		if self.in_bounds(m, 0) and self.board[north_index].is_empty():
+			if row_north == last_rank:
+				m.special_move = 'promotion'
 			moves.append(m)
 
 			# check if pawn can move two squares north
@@ -289,6 +293,8 @@ class Board:
 		if (self.in_bounds(m, west_direction) and
 				piece.diff_colors(self.board[northwest_index])):
 			m.captured_piece = self.board[northwest_index]
+			if row_north == last_rank:
+				m.special_move = 'promotion'
 			moves.append(m)
 
 		# check if pawn can take northeast
@@ -297,6 +303,8 @@ class Board:
 		if (self.in_bounds(m, east_direction) and
 				piece.diff_colors(self.board[northeast_index])):
 			m.captured_piece = self.board[northeast_index]
+			if row_north == last_rank:
+				m.special_move = 'promotion'
 			moves.append(m)
 
 		# en passant
@@ -455,6 +463,7 @@ class Board:
 		self.checks['w'] = self.in_check('w')
 		self.checks['b'] = self.in_check('b')
 
+
 	def in_check(self, side):
 		king = self.board[self.king_index[side]]
 		king_row, king_col = king.index // 8, king.index % 8
@@ -574,7 +583,7 @@ class Board:
 			return from_piece.diff_colors_or_empty(to_piece)
 
 		return False
-	
+
 
 	def __repr__(self):
 		s = '\n'
