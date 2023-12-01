@@ -47,7 +47,8 @@ class Piece:
 		return self.color != piece.color
 
 	def __repr__(self):
-		return f'P({self.color}, {self.type}, {self.index}, {self.symbol})'
+		return f'{self.symbol}'
+		# return f'P({self.color}, {self.type}, {self.index}, {self.symbol})'
 
 	# used for GUI when grouping captured pieces
 	def __lt__(self, other):

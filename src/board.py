@@ -2,6 +2,19 @@ from piece import Piece
 from move import Move
 from move_generator import MoveGenerator
 
+'''
+TODO:
+- merge move_generator with board and organize code a little bit
+- implement promotions
+- implement backspace restart in GUI
+- implement draw by repetition, 50-move rule
+- implement theoretical draw/dead position
+	- king vs king
+	- king vs king and bishop
+	- king vs king and knight
+	- king and bishop vs king and bishop where both bishops are on same color squares
+'''
+
 
 class Board:
 	move_generator = MoveGenerator()
@@ -91,10 +104,10 @@ class Board:
 			else:
 				self.set_empty_square(move.to_index)
 
-			# undo king index 
-			# works regardless of whether or not the previous move was a castle
-			if move.piece.type == 'k':
-				self.king_index[move.piece.color] = move.from_index
+		# undo king index 
+		# works regardless of whether or not the previous move was a castle
+		if move.piece.type == 'k':
+			self.king_index[move.piece.color] = move.from_index
 
 		self.update_checks()
 
@@ -107,14 +120,12 @@ class Board:
 			self.make_move(move)
 			if not Board.move_generator.in_check(king, self.board):
 				is_valid = True
-			else:
-				print(f'invalid_move: {move}')
 			self.undo_move()
 
 			return is_valid
 
-		king = self.board[self.king_index[turn]]
 		valid_moves = {}
+		king = self.board[self.king_index[turn]]
 		moves = Board.move_generator.generate_pseudo_legal_moves(
 			self.board,
 			self.pieces[turn],
@@ -128,14 +139,35 @@ class Board:
 
 			valid_move_list = []
 			for move in move_list:
-				if is_valid_move(move, king):
+				if move.special_move == 'castle':
+					# make sure king isn't in check and doesn't end up in check after castling
+					king_in_check = Board.move_generator.in_check(king, self.board)
+					king_in_check_after_castling = not is_valid_move(move, king)
+
+					if not king_in_check and not king_in_check_after_castling:
+
+						# king can't castle if path is attacked
+						if move.to_index == 7 or move.to_index == 63:
+							king_index = self.king_index[move.piece.color]
+							king = self.board[king_index]
+							m = Move(king_index, king_index + 1, king)
+							if is_valid_move(m, king):
+								valid_move_list.append(move)
+
+						elif move.to_index == 0 or move.to_index == 56:
+							king_index = self.king_index[move.piece.color]
+							king = self.board[king_index]
+							m = Move(king_index, king_index - 1, king)
+							if is_valid_move(m, king):
+								valid_move_list.append(move)
+
+				elif is_valid_move(move, king):
 					valid_move_list.append(move)
 
 			if valid_move_list:
 				valid_moves[from_index] = valid_move_list
 
 		return valid_moves
-		# return moves
 
 
 	def update_castling_rights(self, move, undo=False):

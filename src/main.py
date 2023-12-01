@@ -170,6 +170,8 @@ while run:
 							is_valid_move = True
 							b.make_move(move)
 							turn = 'w' if turn == 'b' else 'b'
+							king_index = b.king_index[turn]
+							king = b.board[king_index]
 							valid_moves = b.get_valid_moves(turn)
 							selected = None
 

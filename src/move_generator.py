@@ -62,6 +62,7 @@ class MoveGenerator:
 					castling_rights
 				)
 
+				# moves[piece.index] = normal_moves
 				moves[piece.index] = normal_moves + castling_moves
 
 		return moves
