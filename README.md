@@ -12,6 +12,4 @@ This project implements the classic game of chess in Python with a graphical use
 
 - **Legal Move Generation:** Generates and displays all legal moves in a given position, and ensures all player moves are legal. Accounts for special moves such as castling, promotions, and en passant.
 
-- **Comprehensive Rule Set:** Follows all chess rules, including draw by repetition, the fifty-move rule, etc.
-
 - **Checkmate and Stalemate Detection:** Detects a win or draw when one side runs out of legal moves.
